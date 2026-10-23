@@ -1,0 +1,395 @@
+{
+  "mission1": {
+    "title": "Mission 1: The Flood Warning",
+    "subtitle": "Batch processing - 5 mini-games - about 9 minutes",
+    "story": "The river is rising. In 10 minutes it reaches Riverside.\nSpark must tell us where to evacuate - fast.",
+    "hazardColor": "#2F80ED",
+    "districts": [
+      "Riverside",
+      "Old Town",
+      "Harbor",
+      "Hillcrest",
+      "Market",
+      "University"
+    ],
+    "hazardDistrict": "D1",
+    "wrongDistrict": "D3",
+    "safeFrom": "D4",
+    "unsafeFrom": "D5",
+    "sorter": {
+      "title": "Data Sorter",
+      "instruction": "Do we need and trust {name}?  KEEP or TOSS.",
+      "more": "Judge every source by the 4 V's. Volume = how much. Velocity = how fast it arrives. Variety = what format. Veracity = how trustworthy. A huge source is useless if the decision does not need it or if it is not reliable.",
+      "remember": "Pick data with the 4 V's: Volume, Velocity, Variety, Veracity. Keep only what the decision NEEDS and what you can TRUST.",
+      "sources": [
+        {
+          "name": "River Gauges",
+          "color": "#38BDF8",
+          "variety": "IoT sensor readings",
+          "volume": "1.2 M records",
+          "velocity": "every 10 s",
+          "veracity": 71,
+          "keep": true,
+          "reason": "Water level is the main flood signal."
+        },
+        {
+          "name": "Social Entertainment Feed",
+          "color": "#FB7185",
+          "variety": "posts, memes, videos",
+          "volume": "9 M records",
+          "velocity": "bursty",
+          "veracity": 31,
+          "keep": false,
+          "reason": "Huge volume but only 31% veracity - and nothing about water levels."
+        },
+        {
+          "name": "Weather Sensors",
+          "color": "#A78BFA",
+          "variety": "IoT stream (CSV)",
+          "volume": "3.4 M records",
+          "velocity": "every 5 s",
+          "veracity": 88,
+          "keep": true,
+          "reason": "Rainfall per district shows where water is still coming."
+        },
+        {
+          "name": "Power-Grid Logs",
+          "color": "#4ADE80",
+          "variety": "machine logs",
+          "volume": "6 M records",
+          "velocity": "every 1 s",
+          "veracity": 90,
+          "keep": false,
+          "reason": "Reliable, but outside this mission's evacuation analysis. Extra data adds processing work."
+        },
+        {
+          "name": "Emergency Calls",
+          "color": "#F472B6",
+          "variety": "text + GPS",
+          "volume": "40 K records",
+          "velocity": "real time",
+          "veracity": 76,
+          "keep": true,
+          "reason": "Citizens confirm flooding street by street."
+        },
+        {
+          "name": "City Location Table",
+          "color": "#FBBF24",
+          "variety": "table (Parquet)",
+          "volume": "1.5 K rows",
+          "velocity": "static",
+          "veracity": 99,
+          "keep": true,
+          "reason": "Sensors only have IDs - this table maps them to districts."
+        }
+      ],
+      "howTo": "1. A data crate slides in. Read its 4 V's on the panel.\n2. Ask: does a FLOOD decision need this data? Can we trust it (Veracity)?\n3. Press KEEP (green) or TOSS (red).\n\nExample: a funny-video feed is huge, but useless for a flood -> TOSS.",
+      "situation": "Six data sources want to enter the pipeline."
+    },
+    "cleanup": {
+      "title": "Clean-Up Blaster",
+      "instruction": "Find the RED problem - press the tool that fixes it.",
+      "more": "Dirty data gives wrong answers even on a perfect cluster. Each cleaning step is a Spark transformation: dropDuplicates(), dropna(), cast() to fix a type, or filtering corrupted rows into a quarantine table.",
+      "remember": "Duplicate -> dropDuplicates()   Missing -> dropna()   Wrong type -> cast()   Corrupted -> quarantine.",
+      "tools": [
+        {
+          "id": "dup",
+          "label": "Remove Duplicates",
+          "code": ".dropDuplicates()",
+          "color": "#A78BFA",
+          "hint": "same row twice"
+        },
+        {
+          "id": "missing",
+          "label": "Remove Missing",
+          "code": ".dropna()",
+          "color": "#38BDF8",
+          "hint": "empty / null value"
+        },
+        {
+          "id": "type",
+          "label": "Fix Data Type",
+          "code": ".cast(\"int\") / .cast(\"double\")",
+          "color": "#FBBF24",
+          "hint": "text instead of a number"
+        },
+        {
+          "id": "corrupt",
+          "label": "Quarantine Corrupted",
+          "code": ".filter(bad) -> quarantine",
+          "color": "#F87171",
+          "hint": "garbage like -999 or ###ERR###"
+        }
+      ],
+      "records": [
+        {
+          "source": "Weather Sensors",
+          "row": "sensor_17 | 10:05 | rain = 12 mm\n<color=#F87171>sensor_17 | 10:05 | rain = 12 mm\nsensor_17 | 10:05 | rain = 12 mm</color>",
+          "tool": "dup",
+          "clue": "The same reading appears more than once."
+        },
+        {
+          "source": "River Gauges",
+          "row": "gauge_04 | 10:05 | depth = <color=#F87171>-999</color> m",
+          "tool": "corrupt",
+          "clue": "-999 is a sensor fault code, not a real depth."
+        },
+        {
+          "source": "Emergency Calls",
+          "row": "call_8812 | 10:06 | location = <color=#F87171>null</color>",
+          "tool": "missing",
+          "clue": "The location value is empty."
+        },
+        {
+          "source": "City Location Table",
+          "row": "district_id = <color=#F87171>\"04\"</color> (text)   readings use 4 (number)",
+          "tool": "type",
+          "clue": "Text vs number - the join key types do not match."
+        },
+        {
+          "source": "Emergency Calls",
+          "row": "call_9031 | 10:07 | location = <color=#F87171>null</color>",
+          "tool": "missing",
+          "clue": "No location: it cannot be matched to a district."
+        },
+        {
+          "source": "River Gauges",
+          "row": "gauge_11 | 10:07 | depth = <color=#F87171>###ERR###</color>",
+          "tool": "corrupt",
+          "clue": "Garbled value from a broken sensor."
+        },
+        {
+          "source": "Weather Sensors",
+          "row": "sensor_02 | 10:08 | rain = 9 mm\n<color=#F87171>sensor_02 | 10:08 | rain = 9 mm</color>",
+          "tool": "dup",
+          "clue": "Counting it twice would double the rainfall."
+        },
+        {
+          "source": "River Gauges",
+          "row": "gauge_09 | 10:08 | depth = <color=#F87171>\"3.4\"</color> (text)   expected a number",
+          "tool": "type",
+          "clue": "A number stored as text must be cast to a numeric type (here: double)."
+        }
+      ],
+      "howTo": "1. A dirty record appears. Find the RED part - that is the problem.\n2. Press the tool that fixes it.\n3. First one is PRACTICE (it waits for you). Then records fly toward you - fix each before it arrives.\n\nEach tool says what it fixes, e.g. Remove Missing = empty / null values.",
+      "practice": {
+        "source": "Weather Sensors",
+        "row": "sensor_05 | 10:01 | rain = 7 mm\n<color=#F87171>sensor_05 | 10:01 | rain = 7 mm</color>   <size=80%>(same row received twice)</size>",
+        "tool": "dup",
+        "clue": "The same reading appears twice."
+      },
+      "situation": "Dirty records are flowing in from the sensors."
+    },
+    "pipeline": {
+      "title": "Lazy Pipeline",
+      "instruction": "Click the block for the glowing slot.",
+      "more": "Transformations like filter, join and groupBy are LAZY: they only add a step to the plan. Spark runs nothing until an ACTION such as write, count, show or collect asks for a result. This lets Spark optimize the whole plan first.",
+      "remember": "Transformations (filter, join, groupBy) are LAZY - they only build a plan. An ACTION (write, count, show, collect) makes Spark run the job.",
+      "order": [
+        "read",
+        "filter",
+        "join",
+        "groupBy",
+        "write"
+      ],
+      "blocks": [
+        {
+          "id": "read",
+          "label": "spark.read",
+          "code": "df = spark.read.parquet(\"/flood\")",
+          "kind": "transformation",
+          "role": "Start by reading the data into a DataFrame."
+        },
+        {
+          "id": "filter",
+          "label": "filter",
+          "code": ".filter(col(\"depth\") > 1.5)",
+          "kind": "transformation",
+          "role": "Filter early: keep only flood-relevant rows so less data moves later."
+        },
+        {
+          "id": "join",
+          "label": "join",
+          "code": ".join(locations, \"sensor_id\")",
+          "kind": "transformation",
+          "role": "Join adds the district to each reading - needed before grouping by district."
+        },
+        {
+          "id": "groupBy",
+          "label": "groupBy + agg",
+          "code": ".groupBy(\"district\").agg(max(\"depth\"))",
+          "kind": "transformation",
+          "role": "Group by district and compute the danger level."
+        },
+        {
+          "id": "write",
+          "label": "write",
+          "code": ".write.saveAsTable(\"alerts\")",
+          "kind": "action",
+          "role": "write is the ACTION - it comes last and makes Spark run everything."
+        },
+        {
+          "id": "collect",
+          "label": "collect",
+          "code": ".collect()",
+          "kind": "action",
+          "role": "collect brings all rows to the driver and can exhaust its memory on large results."
+        },
+        {
+          "id": "show",
+          "label": "show",
+          "code": ".show()",
+          "kind": "action",
+          "role": "show only prints 20 rows for debugging - it does not save results for the city."
+        }
+      ],
+      "checkQuestion": "Which block made Spark actually START working?",
+      "checkOptions": [
+        "filter",
+        "join",
+        "write"
+      ],
+      "checkAnswer": 2,
+      "howTo": "1. The rack has 5 numbered slots.\n2. The panel asks what each slot needs. Click the block that does it.\n3. BLUE blocks only PLAN. The ORANGE block RUNS the job - watch the dashboard.\n\nCareful: two blocks are traps!",
+      "prompts": [
+        "Slot 1: which block LOADS the data?",
+        "Slot 2: which block keeps only USEFUL rows?",
+        "Slot 3: which block ADDS the district?",
+        "Slot 4: which block GROUPS by district?",
+        "Slot 5: which block SAVES - and makes Spark RUN?"
+      ],
+      "situation": "The flood job needs a Spark plan."
+    },
+    "cluster": {
+      "title": "Balance the Cluster",
+      "instruction": "Click the RED executor, then an idle one.",
+      "more": "The driver turns the plan into stages and sends one task per partition to the executors. A stage ends only when its slowest task ends. Data skew means some partitions are much bigger than others (here: one key, Riverside, has far more rows), so a few tasks run much longer and everyone waits. In real Spark you do not move partitions by hand: df.repartition(n) shuffles the rows into n new partitions, which usually spreads the work more evenly; for one very skewed key you may also need to 'salt' the key or let Adaptive Query Execution split skewed partitions. Moving cubes here is a simplified picture.",
+      "remember": "Driver plans, executors work, one task per partition. Data skew = uneven partition sizes, so a few slow tasks hold up the whole stage. Repartitioning (df.repartition(16)) or salting a skewed key spreads the ROWS more evenly.",
+      "partitions": [
+        2,
+        10,
+        2,
+        2
+      ],
+      "howTo": "1. Click the parts the arrow points to: driver, executor, partition.\n2. Watch the job run. One executor will be overloaded.\n3. Fix it: click the RED executor, then click an idle one. Repeat until all are equal.",
+      "situation": "The job is running on the cluster."
+    },
+    "trust": {
+      "title": "Trust Check",
+      "instruction": "APPROVE, REJECT or RERUN each report?",
+      "more": "A result is only as good as the pipeline behind it. Approve only when the sources are right, the data is clean and the job finished. Reject output built on bad data. Rerun when the job did not finish.",
+      "remember": "Before acting on data, check: right sources? cleaned? job finished? Good -> APPROVE. Bad data -> REJECT. Job not finished -> RERUN.",
+      "reports": [
+        {
+          "title": "Night-shift team",
+          "trust": 38,
+          "correct": "reject",
+          "lines": [
+            "[X] used the Social Entertainment Feed (31% veracity)",
+            "[X] skipped cleaning: -999 depths included",
+            "[OK] Spark job finished"
+          ],
+          "result": "Says: evacuate Harbor.",
+          "why": "Built on unreliable, dirty data - acting on it would evacuate the wrong district."
+        },
+        {
+          "title": "Backup team",
+          "trust": 55,
+          "correct": "rerun",
+          "lines": [
+            "[OK] right sources",
+            "[OK] data cleaned",
+            "[X] job stopped at 52% (skew not fixed)"
+          ],
+          "result": "Says: evacuate Riverside (partial data).",
+          "why": "The data is fine, but the job never finished - fix the cluster and RERUN."
+        },
+        {
+          "title": "Your team",
+          "trust": 94,
+          "correct": "approve",
+          "lines": [
+            "[OK] right sources",
+            "[OK] data cleaned",
+            "[OK] job finished after repartition"
+          ],
+          "result": "Says: evacuate Riverside, send rescue via Hillcrest.",
+          "why": "Trustworthy output - approve it and save the city!"
+        }
+      ],
+      "howTo": "1. Read the report: green [OK] lines are good, red [X] lines are problems.\n2. Bad data -> REJECT.  Job not finished -> RERUN.  All good -> APPROVE.\n3. Watch what happens to the city.",
+      "situation": "Three teams sent flood results."
+    },
+    "floodMinutes": 10
+  },
+  "mission2": {
+    "title": "Mission 2: Rush Hour Stream",
+    "subtitle": "Streaming - 2 mini-games - about 5 minutes",
+    "story": "A stadium just emptied at rush hour.\nAmbulance GPS data streams in non-stop.",
+    "window": {
+      "title": "Window Catcher",
+      "instruction": "Pick a watermark. Catch 95%+ with delay under 15 s.",
+      "more": "Spark groups events by EVENT time (when they happened) into 5-minute windows and tracks the latest event time it has seen. The watermark = latest event time minus the threshold (e.g. 10 min). Events newer than the watermark are still added to their window; events later than the threshold MAY be dropped. In Append output mode a window's result is written once, when the watermark passes the window's end, and its state is then removed. A bigger threshold keeps more late events, but results come later and more state is kept. The percentages and delays in this game are mission presets for this traffic, not fixed Spark numbers.",
+      "remember": "Streaming groups events into EVENT-TIME windows. A WATERMARK = how late events may be (latest event time minus the threshold). Events later than that may be dropped. Bigger watermark = more complete, but later results and more state.",
+      "goalCaught": 95,
+      "goalDelay": 15,
+      "options": [
+        {
+          "minutes": 0,
+          "caught": 82,
+          "delay": 2
+        },
+        {
+          "minutes": 2,
+          "caught": 89,
+          "delay": 4
+        },
+        {
+          "minutes": 5,
+          "caught": 93,
+          "delay": 6
+        },
+        {
+          "minutes": 10,
+          "caught": 99,
+          "delay": 9
+        },
+        {
+          "minutes": 20,
+          "caught": 100,
+          "delay": 22
+        }
+      ],
+      "howTo": "1. Watch the stream: ORANGE dots are events that arrive LATE.\n2. Pick a watermark = how late (in event time) an event may be and still count. Then press RUN.\n3. Goal: catch 95% or more, with results ready within 15 s.",
+      "situation": "GPS events stream in - some arrive LATE."
+    },
+    "crash": {
+      "title": "Crash Recovery",
+      "instruction": "Pick what lets the stream RESUME.",
+      "more": "A streaming query keeps running totals (state) and remembers which events it already read (offsets). If ONE executor fails, Spark simply retries its tasks. But if the whole application restarts, everything in memory is gone. A checkpoint saves offsets and state to durable storage, so the restarted query resumes where it stopped. Cache lives in memory, so it is lost too.",
+      "remember": "A CHECKPOINT saves a stream's progress (offsets + state) to durable storage, so after a restart Spark RESUMES instead of starting over. Cache is not durable.",
+      "options": [
+        {
+          "id": "cache",
+          "label": "Cache the data",
+          "correct": false,
+          "why": "Cache lives in memory - it was lost when the application restarted."
+        },
+        {
+          "id": "checkpoint",
+          "label": "Add a checkpoint",
+          "correct": true,
+          "why": "The checkpoint saved offsets + state on durable storage, so the query resumed at 60%."
+        },
+        {
+          "id": "partitions",
+          "label": "Add more partitions",
+          "correct": false,
+          "why": "More partitions spread work, but they do not save progress."
+        }
+      ],
+      "howTo": "1. Watch the stream - the application will crash and restart.\n2. Pick what would let the stream survive the restart.\n3. Watch: does it resume, or start over?",
+      "situation": "The streaming application restarted without a durable checkpoint."
+    }
+  }
+}

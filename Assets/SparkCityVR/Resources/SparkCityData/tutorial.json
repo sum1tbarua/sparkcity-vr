@@ -1,0 +1,39 @@
+{
+  "cards": [
+    {
+      "id": "howto",
+      "title": "How to play",
+      "color": "#E25A1C",
+      "body": "Point your controller.\nPull the TRIGGER to choose.",
+      "picture": "point  ->  trigger"
+    },
+    {
+      "id": "dataframe",
+      "title": "DataFrame",
+      "color": "#A78BFA",
+      "body": "A big table, split into chunks\nacross many machines.",
+      "picture": "| sensor | time | depth |"
+    },
+    {
+      "id": "lazy",
+      "title": "Transformation vs Action",
+      "color": "#FBBF24",
+      "body": "Transformations only PLAN.\nAn ACTION makes Spark RUN.",
+      "picture": "filter -> join -> write()  =  RUN"
+    },
+    {
+      "id": "cluster",
+      "title": "Driver, Executor, Partition",
+      "color": "#4ADE80",
+      "body": "The DRIVER plans. EXECUTORS work.\nOne task per PARTITION.",
+      "picture": "[DRIVER] -> [E1] [E2] [E3] [E4]"
+    },
+    {
+      "id": "trust",
+      "title": "Data Trust",
+      "color": "#38BDF8",
+      "body": "Good sources + clean data + finished job\n= output you can act on.",
+      "picture": "trust high -> APPROVE"
+    }
+  ]
+}
