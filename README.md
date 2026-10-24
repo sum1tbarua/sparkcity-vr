@@ -2,7 +2,7 @@
   <img src="Docs/Images/spark-city-vr-icon.png" alt="SparkCity VR — a connected city inside a VR headset" width="220">
 </p>
 
-<h1 align="center">SparkCity VR</h1>
+<!-- <h1 align="center">SparkCity VR</h1> -->
 
 <p align="center">
   <strong>Build reliable data pipelines. Make critical decisions. Protect the city.</strong>
